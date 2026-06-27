@@ -103,7 +103,6 @@ footer{padding:34px 0;color:var(--muted);font-size:14px;text-align:center;}
   </form>
   <div class="msg" id="msg-top"></div>
   <div class="fine">Free for applicants. Built by an applicant, not a consulting firm.</div>
-  <div class="count"><span class="dot"></span> <b id="count">312</b>&nbsp;applicants on the waitlist</div>
 </div></header>
 
 <section><div class="wrap">
@@ -194,7 +193,6 @@ footer{padding:34px 0;color:var(--muted);font-size:14px;text-align:center;}
    ============================================================ */
 const ENDPOINT = "https://formspree.io/f/xkolbjqk";
 
-let count = 312;
 function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
 function wire(formId, inputId, msgId){
@@ -218,7 +216,6 @@ function wire(formId, inputId, msgId){
       msg.className = "msg ok";
       msg.textContent = "You are on the list. We will be in touch as the first cohort forms.";
       input.value = "";
-      count++; document.getElementById("count").textContent = count;
     }catch(err){
       msg.className = "msg err";
       msg.textContent = "Something went wrong. Please try again.";
