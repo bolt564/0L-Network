@@ -1,3 +1,4 @@
+
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The 0L Network</title>
@@ -129,6 +130,11 @@ h2{letter-spacing:-.3px;}
       <div style="margin-top:9px;display:flex;gap:8px"><button class="btn sm" onclick="askScholarship()">Send</button><button class="btn ghost sm" onclick="resetScholarship()">Start over</button></div>
       <div id="scholans" class="small" style="margin-top:10px;white-space:pre-wrap"></div>
     </div>
+    <div class="card" id="deccard"><h3>Decision helper</h3><p class="small">Once you have more than one acceptance, describe your options here, cost, outcomes, location, fit, whatever you know, and this will ask what actually matters to you rather than telling you what to pick. Answer follow-ups with just your answer, it remembers the conversation.</p>
+      <textarea id="decq" placeholder="e.g. I got into Fordham and Brooklyn Law. Fordham is $15k less debt, Brooklyn Law has slightly better public interest placement. Which should I pick?"></textarea>
+      <div style="margin-top:9px;display:flex;gap:8px"><button class="btn sm" onclick="askDecision()">Send</button><button class="btn ghost sm" onclick="resetDecision()">Start over</button></div>
+      <div id="decans" class="small" style="margin-top:10px;white-space:pre-wrap"></div>
+    </div>
   </section>
   <section class="tab" id="community">
     <h2>Community</h2><p class="sub">Share updates, ask questions, post decisions. Be kind, be real.</p>
@@ -143,6 +149,11 @@ h2{letter-spacing:-.3px;}
       <div class="field"><label>LSAT</label><input class="in" id="plsat" type="number" min="120" max="180" style="width:100px"></div>
       <div class="field"><label>GPA</label><input class="in" id="pgpa" type="number" min="0" max="4.33" step="0.01" style="width:100px"></div>
       <div style="margin-top:8px"><button class="btn" onclick="saveProfile()">Save</button></div>
+    </div>
+    <div class="card" id="stratcard"><h3>Strategy advisor</h3><p class="small">Honest, specific guidance on whether a retake is worth it, how timing affects your odds, and how to strengthen what you have. Direct, not falsely encouraging. Answer follow-ups with just your answer, it remembers the conversation.</p>
+      <textarea id="stratq" placeholder="e.g. I'm at a 152 with a 3.4 GPA, applying in October. Is it worth retaking, or should I just apply now?"></textarea>
+      <div style="margin-top:9px;display:flex;gap:8px"><button class="btn sm" onclick="askStrategy()">Send</button><button class="btn ghost sm" onclick="resetStrategy()">Start over</button></div>
+      <div id="stratans" class="small" style="margin-top:10px;white-space:pre-wrap"></div>
     </div>
   </section>
 </div></div>
@@ -293,6 +304,22 @@ async function askScholarship(){
   }catch(e){out.textContent="Something went wrong: "+(e.message||"please try again.");}
 }
 function resetScholarship(){scholHistory="";document.getElementById("scholq").value="";document.getElementById("scholans").textContent="";}
+/* AI ASSISTANT: decision helper */
+let decHistory="";
+async function askDecision(){
+  const ta=document.getElementById("decq");const q=ta.value.trim();
+  const out=document.getElementById("decans");
+  if(!q){out.textContent="Describe the offers you are choosing between first.";return;}
+  out.textContent=(decHistory?decHistory+"\n\n":"")+"You: "+q+"\n\nThinking...";
+  try{
+    const{data,error}=await sb.functions.invoke("ai",{body:{mode:"decision",input:q,context:decHistory}});
+    if(error)throw error;
+    const reply=(data&&data.reply)||(data&&data.error)||"No response came back. Try again in a moment.";
+    decHistory=(decHistory?decHistory+"\n\n":"")+"You: "+q+"\nAssistant: "+reply;
+    out.textContent=decHistory;ta.value="";
+  }catch(e){out.textContent="Something went wrong: "+(e.message||"please try again.");}
+}
+function resetDecision(){decHistory="";document.getElementById("decq").value="";document.getElementById("decans").textContent="";}
 /* COMMUNITY */
 async function loadFeed(){
   document.getElementById("postchan").innerHTML=["Decisions","Splitters","Essays & PS","Scholarships","Advice"].map(c=>`<option>${c}</option>`).join("");
@@ -321,6 +348,22 @@ async function saveProfile(){
   document.getElementById("navav").textContent=display_name[0].toUpperCase();
   toast("Profile saved");go("home");
 }
+/* AI ASSISTANT: strategy advisor */
+let stratHistory="";
+async function askStrategy(){
+  const ta=document.getElementById("stratq");const q=ta.value.trim();
+  const out=document.getElementById("stratans");
+  if(!q){out.textContent="Describe your numbers and situation first.";return;}
+  out.textContent=(stratHistory?stratHistory+"\n\n":"")+"You: "+q+"\n\nThinking...";
+  try{
+    const{data,error}=await sb.functions.invoke("ai",{body:{mode:"strategy",input:q,context:stratHistory}});
+    if(error)throw error;
+    const reply=(data&&data.reply)||(data&&data.error)||"No response came back. Try again in a moment.";
+    stratHistory=(stratHistory?stratHistory+"\n\n":"")+"You: "+q+"\nAssistant: "+reply;
+    out.textContent=stratHistory;ta.value="";
+  }catch(e){out.textContent="Something went wrong: "+(e.message||"please try again.");}
+}
+function resetStrategy(){stratHistory="";document.getElementById("stratq").value="";document.getElementById("stratans").textContent="";}
 let lastSuggestion=[];
 function countBands(lsat,gpa){const c={likely:0,target:0,reach:0,hard:0};DATA.forEach(s=>{const Ls=pos(lsat,s.l25,s.l50,s.l75);const hasG=gpa>0;const Gs=hasG?pos(gpa,s.g25,s.g50,s.g75):Ls;const v=hasG?0.6*Ls+0.4*Gs:Ls;c[v>=2.3?"likely":v>=1.5?"target":v>=0.8?"reach":"hard"]++;});return c;}
 function explain(){const el=document.getElementById("explain");if(!el)return;if(!profile||!profile.lsat){el.innerHTML='<p style="margin:0;color:#c9d2ee;font-size:14px">Add your LSAT and GPA in Profile to unlock your personalized read.</p>';return;}
