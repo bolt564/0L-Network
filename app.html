@@ -124,9 +124,9 @@ h2{letter-spacing:-.3px;}
     <h2>My school list</h2><p class="sub">Saved to your account. Update status as the cycle moves; results quietly build the network's data.</p>
     <div class="card"><div class="kpi" id="listkpi"></div></div>
     <div id="listitems"></div>
-    <div class="card" id="scholcard"><h3>Scholarship negotiation helper</h3><p class="small">Describe your offers in your own words, school names and dollar amounts if you have them, and get a draft email to a financial aid office. You always send it, and you should personalize it first.</p>
+    <div class="card" id="scholcard"><h3>Scholarship negotiation helper</h3><p class="small">Describe your offers in your own words, school names and dollar amounts if you have them. If it asks a follow-up question, just type your answer alone in the box and send it, this remembers what was already said. You always send the final email yourself, and you should personalize it first.</p>
       <textarea id="scholq" placeholder="e.g. My top choice, Fordham, offered me $15k/year. Brooklyn Law offered me a full ride with the same numbers. How do I ask Fordham to match?"></textarea>
-      <div style="margin-top:9px"><button class="btn sm" onclick="askScholarship()">Draft the email</button></div>
+      <div style="margin-top:9px;display:flex;gap:8px"><button class="btn sm" onclick="askScholarship()">Send</button><button class="btn ghost sm" onclick="resetScholarship()">Start over</button></div>
       <div id="scholans" class="small" style="margin-top:10px;white-space:pre-wrap"></div>
     </div>
   </section>
@@ -259,8 +259,16 @@ function renderList(){
   box.innerHTML=listCache.map(it=>{const s=DATA.find(x=>x.name===it.school_name)||{};const a=assess(s);
     return `<div class="row ${a.band}"><div><div class="nm">${esc(it.school_name)}</div><div class="mt">Tuition ${money(s.tuNR||s.tuR)} · Bar ${pc(s.bar)}</div></div>
     <span class="pill ${a.band}">${LABELS[a.band]}</span>
-    <select data-sch="${esc(it.school_name)}">${STATUSES.map(st=>`<option ${it.status===st?'selected':''}>${st}</option>`).join("")}</select></div>`;}).join("");
+    <div style="display:flex;gap:6px;align-items:center"><select data-sch="${esc(it.school_name)}">${STATUSES.map(st=>`<option ${it.status===st?'selected':''}>${st}</option>`).join("")}</select><button class="btn ghost sm" data-rm="${esc(it.school_name)}" title="Remove from list">Remove</button></div></div>`;}).join("");
   box.querySelectorAll("[data-sch]").forEach(sel=>sel.onchange=()=>setStatus(sel.getAttribute("data-sch"),sel.value));
+  box.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>removeFromList(b.getAttribute("data-rm")));
+}
+async function removeFromList(name){
+  if(!confirm("Remove "+name+" from your list?"))return;
+  const{error}=await sb.from("school_list").delete().eq("user_id",user.id).eq("school_name",name);
+  if(error){toast(error.message);return;}
+  listCache=listCache.filter(x=>x.school_name!==name);
+  toast("Removed from your list");renderList();
 }
 async function setStatus(name,v){
   const{error}=await sb.from("school_list").update({status:v}).eq("user_id",user.id).eq("school_name",name);
@@ -270,17 +278,21 @@ async function setStatus(name,v){
   else toast("Status saved");
 }
 /* AI ASSISTANT: scholarship strategist */
+let scholHistory="";
 async function askScholarship(){
-  const q=document.getElementById("scholq").value.trim();
+  const ta=document.getElementById("scholq");const q=ta.value.trim();
   const out=document.getElementById("scholans");
   if(!q){out.textContent="Describe your offers first, school names and amounts if you have them.";return;}
-  out.textContent="Drafting...";
+  out.textContent=(scholHistory?scholHistory+"\n\n":"")+"You: "+q+"\n\nThinking...";
   try{
-    const{data,error}=await sb.functions.invoke("ai",{body:{mode:"scholarship",input:q}});
+    const{data,error}=await sb.functions.invoke("ai",{body:{mode:"scholarship",input:q,context:scholHistory}});
     if(error)throw error;
-    out.textContent=(data&&data.reply)||(data&&data.error)||"No response came back. Try again in a moment.";
+    const reply=(data&&data.reply)||(data&&data.error)||"No response came back. Try again in a moment.";
+    scholHistory=(scholHistory?scholHistory+"\n\n":"")+"You: "+q+"\nAssistant: "+reply;
+    out.textContent=scholHistory;ta.value="";
   }catch(e){out.textContent="Something went wrong: "+(e.message||"please try again.");}
 }
+function resetScholarship(){scholHistory="";document.getElementById("scholq").value="";document.getElementById("scholans").textContent="";}
 /* COMMUNITY */
 async function loadFeed(){
   document.getElementById("postchan").innerHTML=["Decisions","Splitters","Essays & PS","Scholarships","Advice"].map(c=>`<option>${c}</option>`).join("");
