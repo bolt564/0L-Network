@@ -99,6 +99,10 @@ h2{letter-spacing:-.3px;}
 <div id="app"><div class="wrap" style="margin-top:18px">
   <section class="tab on" id="home">
     <div class="coachcard"><div class="ck">Your read</div><div id="explain"></div></div>
+    <div class="card" id="jargoncard"><h3>Ask about a term or rule</h3><p class="small">Splitter, CAS, yield protection, whatever is confusing you. Plain-English explanations, no judgment.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><input class="in" id="jargonq" placeholder="e.g. what is a splitter?" style="flex:1;min-width:200px"><button class="btn sm" onclick="askJargon()">Explain it</button></div>
+      <div id="jargonans" class="small" style="margin-top:10px;white-space:pre-wrap"></div>
+    </div>
     <div class="card"><h3>Your cycle at a glance</h3><div class="kpi" id="homekpi"></div></div>
     <div class="card"><h3>Get moving</h3><p class="small">Add your numbers in Profile, then build your list from the Estimator.</p>
       <button class="btn ghost sm" onclick="go('estimator')">See my chances</button>
@@ -201,6 +205,18 @@ function renderHome(){explain();const c={likely:0,target:0,reach:0,hard:0};DATA.
    `<div class="b"><div class="n">${profile.lsat?c.likely:"&mdash;"}</div><div class="l">Likely schools</div></div>
     <div class="b"><div class="n">${profile.lsat?c.target:"&mdash;"}</div><div class="l">Target schools</div></div>
     <div class="b"><div class="n">${listCache.length}</div><div class="l">On your list</div></div>`;}
+/* AI ASSISTANT: jargon decoder */
+async function askJargon(){
+  const q=document.getElementById("jargonq").value.trim();
+  const out=document.getElementById("jargonans");
+  if(!q){out.textContent="Type a term or question first.";return;}
+  out.textContent="Thinking...";
+  try{
+    const{data,error}=await sb.functions.invoke("ai",{body:{mode:"jargon",input:q}});
+    if(error)throw error;
+    out.textContent=(data&&data.reply)||(data&&data.error)||"No response came back. Try again in a moment.";
+  }catch(e){out.textContent="Something went wrong: "+(e.message||"please try again.");}
+}
 /* ESTIMATOR */
 function renderEst(){
   document.getElementById("elsat").value=profile.lsat||"";document.getElementById("egpa").value=profile.gpa||"";
@@ -298,6 +314,7 @@ document.getElementById("esearch").addEventListener("input",e=>{query=e.target.v
 document.getElementById("elsat").addEventListener("input",e=>{profile.lsat=parseInt(e.target.value,10)||null;renderEst();});
 document.getElementById("egpa").addEventListener("input",e=>{profile.gpa=parseFloat(e.target.value)||null;renderEst();});
 document.getElementById("apw").addEventListener("keydown",e=>{if(e.key==="Enter")doAuth();});
+document.getElementById("jargonq").addEventListener("keydown",e=>{if(e.key==="Enter")askJargon();});
 /* BOOT */
 (async function(){try{await ensureSupabase();sb=window.supabase.createClient(SB_URL,SB_KEY);const{data:{session}}=await sb.auth.getSession();if(session){user=session.user;await afterLogin();}}catch(e){authMsg("err",e.message||"Startup failed.");}})();
 </script></body></html>
