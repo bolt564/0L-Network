@@ -124,6 +124,11 @@ h2{letter-spacing:-.3px;}
     <h2>My school list</h2><p class="sub">Saved to your account. Update status as the cycle moves; results quietly build the network's data.</p>
     <div class="card"><div class="kpi" id="listkpi"></div></div>
     <div id="listitems"></div>
+    <div class="card" id="scholcard"><h3>Scholarship negotiation helper</h3><p class="small">Describe your offers in your own words, school names and dollar amounts if you have them, and get a draft email to a financial aid office. You always send it, and you should personalize it first.</p>
+      <textarea id="scholq" placeholder="e.g. My top choice, Fordham, offered me $15k/year. Brooklyn Law offered me a full ride with the same numbers. How do I ask Fordham to match?"></textarea>
+      <div style="margin-top:9px"><button class="btn sm" onclick="askScholarship()">Draft the email</button></div>
+      <div id="scholans" class="small" style="margin-top:10px;white-space:pre-wrap"></div>
+    </div>
   </section>
   <section class="tab" id="community">
     <h2>Community</h2><p class="sub">Share updates, ask questions, post decisions. Be kind, be real.</p>
@@ -263,6 +268,18 @@ async function setStatus(name,v){
   const it=listCache.find(x=>x.school_name===name);if(it)it.status=v;
   if(TERMINAL[v]){await sb.from("decisions").insert({user_id:user.id,school_name:name,result:v,lsat:profile.lsat,gpa:profile.gpa,cycle_year:new Date().getFullYear()});toast("Status saved and logged to the network data");}
   else toast("Status saved");
+}
+/* AI ASSISTANT: scholarship strategist */
+async function askScholarship(){
+  const q=document.getElementById("scholq").value.trim();
+  const out=document.getElementById("scholans");
+  if(!q){out.textContent="Describe your offers first, school names and amounts if you have them.";return;}
+  out.textContent="Drafting...";
+  try{
+    const{data,error}=await sb.functions.invoke("ai",{body:{mode:"scholarship",input:q}});
+    if(error)throw error;
+    out.textContent=(data&&data.reply)||(data&&data.error)||"No response came back. Try again in a moment.";
+  }catch(e){out.textContent="Something went wrong: "+(e.message||"please try again.");}
 }
 /* COMMUNITY */
 async function loadFeed(){
